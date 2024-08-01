@@ -53,22 +53,23 @@
       flex-direction: column;
       clear: both;
     }
-
+    
     .message.self {
       background: #007bff;
       color: white;
-      align-self: flex-end;
+      align-self: flex-end; /* Align messages to the right */
       text-align: right;
       margin-left: auto;
     }
-
+    
     .message.other {
       background: #e0e0e0;
       color: #333;
-      align-self: flex-start;
+      align-self: flex-start; /* Align messages to the left */
       text-align: left;
       margin-right: auto;
     }
+    
 
     #input-container {
       display: flex;
@@ -131,6 +132,29 @@
       font-style: italic;
       text-align: center;
     }
+    #unique-code-container {
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      background: #f9f9f9;
+      border-bottom: 1px solid #ddd;
+    }
+
+    #unique-code {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    #set-code {
+      background: #17a2b8;
+    }
+
+    #set-code:hover {
+      background: #138496;
+    }
   </style>
 </head>
 <body>
@@ -138,6 +162,10 @@
     <div id="username-container">
       <input id="username" placeholder="Enter your name" />
       <button id="set-username">Set Name</button>
+    </div>
+    <div id="unique-code-container">
+      <input id="unique-code" placeholder="Enter unique code" />
+      <button id="set-code">Set Code</button>
     </div>
     <div id="messages"></div>
     <div id="input-container">
@@ -150,74 +178,74 @@
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
-    const usernameInput = document.getElementById('username');
-    const setNameButton = document.getElementById('set-username');
-    const sendButton = document.getElementById('send');
-    const input = document.getElementById('input');
-    const messages = document.getElementById('messages');
+    const socket = io('https://chatapp-2-k00d.onrender.com');
+const usernameInput = document.getElementById('username');
+const setNameButton = document.getElementById('set-username');
+const sendButton = document.getElementById('send');
+const input = document.getElementById('input');
+const messages = document.getElementById('messages');
 
-    let username = '';
+let username = '';
+let uniqueCode = '';
 
-    setNameButton.onclick = function() {
-      username = usernameInput.value.trim();
-      if (username) {
-        socket.emit('new user', username);
-        usernameInput.disabled = true;
-        setNameButton.disabled = true;
-      }
-    };
+setNameButton.onclick = function() {
+  username = usernameInput.value.trim();
+  if (username) {
+    socket.emit('new user', username);
+    usernameInput.disabled = true;
+    setNameButton.disabled = true;
+  }
+};
 
-    sendButton.onclick = function() {
-      const message = input.value.trim();
-      if (message && username) {
-        socket.emit('chat message', message);
-        input.value = '';
-      }
-    };
+document.getElementById('set-code').onclick = function() {
+  uniqueCode = document.getElementById('unique-code').value.trim();
+  if (uniqueCode) {
+    socket.emit('set code', uniqueCode);
+  }
+};
 
-    socket.on('previous messages', function(previousMessages) {
-      previousMessages.forEach(data => {
-        displayMessage(data);
-      });
-    });
+sendButton.onclick = function() {
+  const message = input.value.trim();
+  if (message && username && uniqueCode) {
+    socket.emit('chat message', { message: message, uniqueCode: uniqueCode });
+    input.value = '';
+  }
+};
 
-    socket.on('chat message', function(data) {
-      displayMessage(data);
-    });
+socket.on('previous messages', function(previousMessages) {
+  // Clear messages before loading previous ones
+  messages.innerHTML = '';
+  previousMessages.forEach(data => {
+    displayMessage(data);
+  });
+});
 
-    socket.on('user joined', function(username) {
-      displaySystemMessage(`${username} joined the chat`);
-    });
+socket.on('chat message', function(data) {
+  displayMessage(data);
+});
 
-    function displayMessage(data) {
-      const item = document.createElement('div');
-      item.classList.add('message');
-      if (typeof data === 'string') {
-        item.textContent = data;
-        item.classList.add('system-message');
-      } else {
-        item.textContent = data.message;
-        if (data.user === username) {
-          item.classList.add('self');
-        } else {
-          item.classList.add('other');
-        }
-      }
-      messages.appendChild(item);
-      messages.scrollTop = messages.scrollHeight;
+function displayMessage(data) {
+  const item = document.createElement('div');
+  item.classList.add('message');
+  
+  if (typeof data === 'string') {
+    item.textContent = data;
+    item.classList.add('system-message');
+  } else {
+    item.textContent = data.message;
+    if (data.user === username) {
+      item.classList.add('self');
+    } else {
+      item.classList.add('other');
     }
+  }
+  
+  // Ensure the message container has appropriate styles
+  messages.appendChild(item);
+  messages.scrollTop = messages.scrollHeight;
+}
 
-    function displaySystemMessage(message) {
-      const item = document.createElement('div');
-      item.classList.add('message', 'system-message');
-      item.textContent = message;
-      messages.appendChild(item);
-      messages.scrollTop = messages.scrollHeight;
-      setTimeout(() => {
-        messages.removeChild(item);
-      }, 3000);
-    }
+
   </script>
 </body>
 </html>
